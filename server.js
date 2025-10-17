@@ -31,4 +31,4 @@ app.post("/api/memorials", (req, res) => {
   res.status(201).json({ message: "Memorial guardado" });
 });
 
-app.listen(PORT, () => console.log(`🌺 Servidor corriendo en http://localhost:${PORT}`));
+app.listen(3000, '0.0.0.0', () => console.log('Server ready at http://0.0.0.0:3000'));
