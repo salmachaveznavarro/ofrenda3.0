@@ -3,12 +3,11 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.use(express.static(__dirname)); // sirve los archivos HTML, CSS y JS
+app.use(express.static(__dirname));
 app.use(express.json());
 
-// Ruta para leer memoriales
+// Leer memoriales
 app.get("/api/memorials", (req, res) => {
   const file = path.join(__dirname, "data.json");
   if (!fs.existsSync(file)) fs.writeFileSync(file, "[]");
@@ -16,10 +15,11 @@ app.get("/api/memorials", (req, res) => {
   res.json(data);
 });
 
-// Ruta para guardar memorial
+// Guardar memorial
 app.post("/api/memorials", (req, res) => {
   const file = path.join(__dirname, "data.json");
   const newMemorial = req.body;
+  newMemorial.id = Date.now(); // genera ID único
 
   let data = [];
   if (fs.existsSync(file)) {
@@ -31,4 +31,18 @@ app.post("/api/memorials", (req, res) => {
   res.status(201).json({ message: "Memorial guardado" });
 });
 
-app.listen(3000, '0.0.0.0', () => console.log('Server ready at http://0.0.0.0:3000'));
+// 🚀 NUEVO: borrar memorial
+app.delete("/api/memorials/:id", (req, res) => {
+  const file = path.join(__dirname, "data.json");
+  if (!fs.existsSync(file)) return res.status(404).json({ message: "No existe data.json" });
+
+  let data = JSON.parse(fs.readFileSync(file, "utf8"));
+  const id = req.params.id;
+
+  data = data.filter(item => String(item.id) !== String(id));
+
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  res.json({ message: "Memorial borrado" });
+});
+
+app.listen(3000, "0.0.0.0", () => console.log("Server ready at http://0.0.0.0:3000"));
