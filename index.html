@@ -466,8 +466,9 @@
                 });
                 
                 if (response.ok) {
-                    console.log('Memorial guardado en data.json:', newMemorial);
-                    return newMemorial;
+                    const savedMemorial = await response.json();
+                    console.log('Memorial guardado en data.json:', savedMemorial);
+                    return savedMemorial;
                 } else {
                     throw new Error('Error al guardar en servidor');
                 }
@@ -602,7 +603,7 @@
         });
 
         // Función para crear tarjeta de memorial
-        function createMemorialCard(nombre, edad, tipo, recuerdo, ofrendas, imageData = null) {
+        function createMemorialCard(nombre, edad, tipo, recuerdo, ofrendas, imageData = null, id = null) {
             const gallery = document.getElementById('memorialGallery');
             
             const tipoEmojis = {
@@ -625,6 +626,8 @@
             
             const card = document.createElement('div');
             card.className = 'memorial-card rounded-2xl p-6 text-center';
+
+            if (id) card.dataset.id = id;
             
             // Crear contenido con o sin imagen
             const imageSection = imageData ? 
@@ -634,6 +637,13 @@
                 </div>` :
                 `<div class="text-6xl mb-4">${tipoEmojis[tipo] || '🐾'}</div>`;
             
+            // Si estás en modo admin, agrega botón de borrar
+            const isAdmin = window.location.search.includes("admin");
+            const deleteButton = isAdmin ? `
+                <button onclick="deleteMemorial(this)" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 shadow-lg">
+                    🗑️ Borrar
+                </button>
+            ` : "";
             card.innerHTML = `
                 ${imageSection}
                 <h3 class="text-2xl font-bold text-purple-800 mb-2">${nombre}</h3>
@@ -847,30 +857,10 @@
                     memorial.tipo,
                     memorial.recuerdo,
                     memorial.ofrendas || [],
-                    memorial.imagen
+                    memorial.imagen,
+                    memorial.id
                 );
             });
-                // Si entras con ?admin en la URL, mostrar los botones de borrar
-            if (window.location.search.includes("admin")) {
-                // Espera un poco a que las tarjetas se hayan renderizado
-                setTimeout(() => {
-                    document.querySelectorAll(".memorial-card").forEach((card, index) => {
-                        const deleteBtn = document.createElement("button");
-                        deleteBtn.textContent = "🗑️ Borrar";
-                        deleteBtn.className = "bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full mt-2 text-sm";
-                        
-                        deleteBtn.addEventListener("click", async () => {
-                            if (confirm("¿Seguro que quieres borrar este memorial?")) {
-                                const id = savedMemorials[index].id;
-                                await fetch(`/api/memorials/${id}`, { method: "DELETE" });
-                                location.reload();
-                            }
-                        });
-
-                        card.appendChild(deleteBtn);
-                    });
-                }, 500);
-            }
         }
 
         // Cargar memoriales al iniciar la página
@@ -931,7 +921,34 @@
             const result = await res.json();
             alert(result.message);
             }
-
+            async function deleteMemorial(button) {
+                const card = button.closest('.memorial-card');
+                const id = card.dataset.id;
+            
+                if (!id) {
+                    alert('Error: no se encontró el ID del memorial.');
+                    return;
+                }
+            
+                if (!confirm('¿Seguro que deseas borrar este memorial? 🕯️')) {
+                    return;
+                }
+            
+                try {
+                    const res = await fetch(`/api/memorials/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        card.remove();
+                        alert('Memorial borrado correctamente 🌺');
+                    } else {
+                        const error = await res.json();
+                        alert('Error al borrar memorial: ' + (error.message || 'Desconocido'));
+                    }
+                } catch (err) {
+                    console.error('Error al borrar memorial:', err);
+                    alert('No se pudo conectar con el servidor.');
+                }
+            }
+            
     </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98c0bdabe262a09f',t:'MTc2MDA0MjkyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
